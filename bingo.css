@@ -1,0 +1,37 @@
+body, html {
+    height: 100%;
+    box-sizing: border-box;
+}
+
+table,
+td,
+th {
+    border: 1px solid black;
+    border-collapse: collapse;
+    margin: auto;
+    text-align: center;
+}
+
+table {
+    table-layout: fixed;
+    width: 40vw;
+    height: calc(40vw / 5 * 6);
+}
+
+td, th {
+    width: 20%;
+    height: calc(100% / 6);
+    cursor: pointer;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+td.selected {
+    background-color: red;
+    border-color: white;
+    border-radius: 100%;
+}
