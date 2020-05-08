@@ -4,30 +4,53 @@
 <head>
     <title>Bingo</title>
     <link rel="stylesheet" type="text/css" href="bingo.css">
+    <script src="thirdparty/base64-typedarrays.js"></script>
+    <script src="binaryIOUtils.js"></script>
 </head>
 
 <body>
+    <script src="random.js"></script>
+    <script src="bingo.js"></script>
     <p>
         Welcome to the free online Bingo card generator. I made this generator
         because (from my very, very brief research) it seemed like there was a
         lack of free online (easily-findable) bingo card generators, and I had
-        free time. I specify that it is a "free" online bingo card generator
-        because I think a lot of times people search for stuff that is "free"
-        and generally the stuff that is labeled as "free" is not actually that
-        free, so I thought I'd try to add something to the search results that
-        is actually free and is labeled as free.
+        free time. When I say "free," I mean that it doesn't cost anything, no
+        matter how many bingo cards you want to generate. It's not perfect, but
+        for anyone that finds it, I hope it's useful.
     </p>
     <p>
-        When you generate a bingo card, all the data of the card is stored in its
-        URL, so your bingo card will never expire as long as this website exists.
-        The data is not stored anywhere except on your browser and in the URL,
-        so it does not cost me anything, and therefore should not cost you anything
-        either!
+        When you generate a bingo card, all the data of the card is stored in
+        its URL, so your bingo card will never expire as long as this website
+        exists. We currently only support 75 ball bingo. In theory (and from my
+        tests), your bingo cards should also be printable if you wish to print
+        it out, but this is not currently guaranteed. This project is very Work
+        In Progress at the moment.
     </p>
-    Please enter the number of BINGO cards you would like to generate:
-    <script src="random.js"></script>
-    <script type="module" src="thirdparty/base64-typedarrays.js"></script>
-    <script type="module" src="bingo.js"></script>
+    Please enter the number of Bingo cards you would like to generate:
+    <input id="input" type="number">
+    <button id="generate" onclick="gen()">Generate</button>
+    <p id="cards"></p>
+    <script>
+        function gen() {
+            var num = parseInt(document.getElementById('input').value);
+            var p = document.getElementById('cards');
+            p.innerText = '';
+
+            var href = window.location.href.split('?')[0].replace('generator.html', 'index.html');
+            for (var i = 0; i < num; i++) {
+                var str = href + '?s=' + Bingo.generateCardId(i);
+                var a = document.createElement('a');
+                var br = document.createElement('br');
+
+                a.href = str;
+                a.innerText = str;
+
+                p.appendChild(a);
+                p.appendChild(br);
+            }
+        }
+    </script>
 </body>
 
 </html>

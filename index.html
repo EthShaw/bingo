@@ -4,13 +4,27 @@
 <head>
     <title>Bingo Card</title>
     <link rel="stylesheet" type="text/css" href="bingo.css">
-    <script type="module" src="thirdparty/base64-typedarrays.js"></script>
+    <script src="thirdparty/base64-typedarrays.js"></script>
+    <script src="binaryIOUtils.js"></script>
 </head>
 
 <body>
     <!--TODO: make this page auto-forward to generator.html if no bingo card is specified in the URL-->
     <script src="random.js"></script>
-    <script type="module" src="bingo.js"></script>
+    <script src="bingo.js"></script>
+    <script>
+        var table = document.createElement('table');
+
+        var card = Bingo.loadCardFromURL();
+
+        if (card == null) {
+            // TODO make this redirect to the generator because this should not happen
+            console.log("MAKING A NEW CARD!");
+            card = new Card(Bingo.generateCardId());
+        }
+
+        card.bindToTable(table, true);
+    </script>
 </body>
 
 </html>

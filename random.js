@@ -1,8 +1,8 @@
 // LCG
 var Random = (function() {
-    const MULTIPLIER_LO = 0xDEECE66D;
-    const MULTIPLIER_HI = 0x5;
-    const ADDIN = 0xB;
+    var MULTIPLIER_LO = 0xDEECE66D;
+    var MULTIPLIER_HI = 0x5;
+    var ADDIN = 0xB;
 
     function Random(seed) {
         if (!(seed instanceof Uint32Array) || seed.length !== 2) {
@@ -12,8 +12,8 @@ var Random = (function() {
     }
 
     Random.prototype.next = function() {
-        // Multiply two 32 bit numbers and round off at 32 bits
-        function mult32(op1, op2) {
+        // Multiply two 32 bit numbers and separates the results into 32bit numbers (lo and hi)
+        function mul32(op1, op2) {
             var hi, lo;
 
             var u1, v1, t, w3, k, w1;
@@ -44,12 +44,12 @@ var Random = (function() {
             };
         }
 
-        // Multiplies everything properly
-        var mult0 = mult32(this.seed[0], MULTIPLIER_LO);
-        var mult1 = mult32(this.seed[0], MULTIPLIER_HI);
-        this.seed[0] = mult0.lo;
-        mult2 = mult32(this.seed[1], MULTIPLIER_LO);
-        this.seed[1] = mult0.hi + mult1.lo + mult2.lo;
+        // Multiplies everything properly. It's like long multiplication.
+        var lolo = mul32(this.seed[0], MULTIPLIER_LO);
+        var lohi = mul32(this.seed[0], MULTIPLIER_HI);
+        var hilo = mul32(this.seed[1], MULTIPLIER_LO);
+        this.seed[0] = lolo.lo;
+        this.seed[1] = lolo.hi + lohi.lo + hilo.lo;
 
         // And add ADDIN
         this.seed[0] += ADDIN;
@@ -72,33 +72,6 @@ var Random = (function() {
         ret[1] = this.seed[1] ^ MULTIPLIER_HI;
         return ret;
     };
-
-    // This returns the seed as a Uint8Array in little-endian order
-    Random.prototype.getSeedAsUint8Array = function() {
-        var seed = this.getSeed();
-        var ret = new Uint8Array(8);
-
-        for (var i = 0; i < 2; i++) {
-            for (var j = 0; j < 4; j++) {
-                ret[i * 4 + j] = (seed[i] >>> (8 * j)) & 0xFF;
-            }
-        }
-
-        return ret;
-    }
-
-    // This sets the seed from a Uint8Array in little-endian order
-    Random.prototype.setSeedAsUint8Array = function(seedIn) {
-        var seedOut = new Uint32Array(2);
-
-        for (var i = 0; i < 2; i++) {
-            for (var j = 0; j < 4; j++) {
-                seedOut[i] |= seedIn[i * 4 + j] << (8 * j)
-            }
-        }
-
-        this.setSeed(seedOut);
-    }
 
     Random.prototype.nextInt = function() {
         // << 0 makes it signed again
