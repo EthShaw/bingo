@@ -6,6 +6,7 @@
     <link rel="stylesheet" type="text/css" href="bingo.css">
     <script src="thirdparty/base64-typedarrays.js"></script>
     <script src="binaryIOUtils.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
 <body>
@@ -16,7 +17,8 @@
         because (from my very, very brief research) it seemed like there was a
         lack of free online (easily-findable) bingo card generators, and I had
         free time. When I say "free," I mean that it doesn't cost anything, no
-        matter how many bingo cards you want to generate. It's not perfect, but
+        matter how many bingo cards you want to generate, not that it's free
+        for a certain amount and then charges for more. It's not perfect, but
         for anyone that finds it, I hope it's useful.
     </p>
     <p>
@@ -36,10 +38,16 @@
             var num = parseInt(document.getElementById('input').value);
             var p = document.getElementById('cards');
             p.innerText = '';
+            var ids = [];
 
-            var href = window.location.href.split('?')[0].replace('generator.html', 'index.html');
+            var href = window.location.href.split('?')[0].replace('generator.html', '');
             for (var i = 0; i < num; i++) {
-                var str = href + '?s=' + Bingo.generateCardId(i);
+                var id;
+                do {
+                    id = Bingo.generateCardId(i);
+                } while (ids.includes(id));
+
+                var str = href + '?s=' + id;
                 var a = document.createElement('a');
                 var br = document.createElement('br');
 
