@@ -82,11 +82,14 @@ Bingo.prototype.loadStorage = function() {
                 }
             }
 
-            for (var i = 0; i < keysToDelete.length; i++) {
-                delete data[keysToDelete[i]];
-            }
-
             this.CardData = data;
+
+            if (keysToDelete.length > 0) {
+                for (var i = 0; i < keysToDelete.length; i++) {
+                    delete this.CardData[keysToDelete[i]];
+                }
+                this.saveStorage();
+            }
         } catch (err) {
             console.log('There was an error loading the current layout, clearing it!');
             console.error(err);
@@ -100,12 +103,21 @@ Bingo.prototype.saveStorage = function() {
     localStorage.setItem('CardData', JSON.stringify(this.CardData));
 }
 
-Bingo.prototype.getStateForId = function(cardID) {
+Bingo.prototype.getStateForCard = function(card) {
     if (this.isCaller) {
-        // TODO if in caller mode, return from what has been called so far
-        return Card.EMPTY_STATE();
+        var state = Card.EMPTY_STATE();
+
+        for (var row = 0; row < 5; row++) {
+            for (var col = 0; col < 5; col++) {
+                if (this.called.includes(card.numbers[col][row])) {
+                    state[row][col] = true;
+                }
+            }
+        }
+
+        return state;
     } else {
-        return this.CardData[cardID] ? this.CardData[cardID].state : Card.EMPTY_STATE();
+        return this.CardData[card.ID] ? this.CardData[card.ID].state : Card.EMPTY_STATE();
     }
 }
 
@@ -125,7 +137,7 @@ Bingo.prototype.loadCardFromURL = function() {
         // This will throw if the cardID is null or invalid
         return new Card(cardID);
     } catch (err) {
-        console.log("There was an error loading the card from URL!");
+        console.log('There was an error loading the card from URL!');
         console.log(err);
         return null;
     }
@@ -134,12 +146,33 @@ Bingo.prototype.loadCardFromURL = function() {
 Bingo.prototype.generateCardId = function(num) {
     var seed = [Date.now() + (Math.floor(Math.random() * 65536) << 24), Date.now() + (Math.floor(Math.random() * 65536) << 24)];
     var number;
-    if (typeof(num) == "number") {
+    if (typeof (num) == 'number') {
         number = num;
     } else {
         number = Math.floor(Math.random() * 1000);
     }
     return Card.createCardID(seed, number);
+}
+
+Bingo.prototype.startGame = function() {
+    this.isCaller = true;
+    this.toCall = [];
+    this.called = ['FREE SPACE'];
+
+    for (var i = 1; i <= 75; i++) {
+        this.toCall.push(i);
+    }
+}
+
+Bingo.prototype.nextCall = function() {
+    if (this.toCall.length === 0) {
+        return null;
+    } else {
+        var BINGO = 'BINGO'.split('');
+        var num = this.toCall.splice(Math.floor(this.toCall.length * Math.random()), 1)[0];
+        this.called.push(num);
+        return BINGO[Math.floor((num - 1) / 15)] + num;
+    }
 }
 
 // Bingo is a singleton that handles stuff like loading and saving
@@ -148,7 +181,6 @@ var Bingo = new Bingo();
 
 
 function Card(cardID) {
-    this.bingoState = Bingo.getStateForId(cardID);
     this.ID = cardID;
 
     // + and / are replaced with - and _ to make them URL-safe
@@ -166,15 +198,15 @@ function Card(cardID) {
     // Check if it at least has a version (or 2 bytes that should be the
     // version) at the beginning.
     if (bytes.length < 2) {
-        throw "Error: cardID is invalid!";
+        throw 'Error: cardID is invalid!';
     } else {
         var version = readUint16(bytes, 0);
         // At some point, this code could be changed if the cardID format
         // is ever changed so other versions would be supported.
         if (version !== CARD_DATA_VERSION) {
-            throw "Error: invalid cardID version: " + version;
+            throw 'Error: invalid cardID version: ' + version;
         } else if (bytes.length !== 12) {
-            throw "Error: invalid cardID length: " + bytes.length;
+            throw 'Error: invalid cardID length: ' + bytes.length;
         } else {
             var seed = readUint32Array(bytes, 2, 2);
             this.rng = new Random(seed);
@@ -182,6 +214,8 @@ function Card(cardID) {
     }
 
     this.generateNumbers();
+
+    this.bingoState = Bingo.getStateForCard(this);
 }
 
 // This has to be a function because if it was a variable and a card's state
@@ -219,6 +253,22 @@ Card.prototype.persistState = function() {
     Bingo.saveStateForID(this.ID, this.bingoState);
 }
 
+// Gets the card's current state (used when the caller calls a number)
+Card.prototype.updateState = function() {
+    this.bingoState = Bingo.getStateForCard(this);
+
+    for (var col = 0; col < 5; col++) {
+        for (var row = 0; row < 5; row++) {
+            var cell = this.table.children[row + 1].children[col];
+            if (this.bingoState[row][col]) {
+                cell.classList.add('selected');
+            } else {
+                cell.classList.remove('selected');
+            }
+        }
+    }
+}
+
 Card.prototype.generateNumbers = function() {
     var ranges = [
         { min: 1, max: 15 },
@@ -228,6 +278,7 @@ Card.prototype.generateNumbers = function() {
         { min: 61, max: 75 }
     ];
 
+    // NOTE: numbers are stored in the col,row format instead of row,col
     var numbers = [[], [], [], [], []];
 
     for (var col = 0; col < 5; col++) {
@@ -250,7 +301,7 @@ Card.prototype.generateNumbers = function() {
 
 Card.prototype.bindToTable = function(table, editable) {
     this.table = table;
-    table.id = "table_" + this.cardID;
+    table.id = 'table_' + this.cardID;
 
     var header = document.createElement('tr');
     var headers = 'BINGO'.split('');
@@ -303,15 +354,4 @@ Card.prototype.bindToTable = function(table, editable) {
     }
 
     document.body.appendChild(table);
-}
-
-
-// TODO delete this function, its just for testing.
-window.go = function() {
-    var theSeed = [Date.now() + (Math.floor(Math.random() * 65536) << 24), Date.now() + (Math.floor(Math.random() * 65536) << 24)]
-    var theCardNum = Math.floor(Math.random() * 1000);
-    var id = Card.createCardID(theSeed, theCardNum);
-
-    console.log(id);
-    console.log(theSeed);
 }

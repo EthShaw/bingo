@@ -1,3 +1,6 @@
+---
+# These dashes make the page have front-matter, so Jekyll will process it
+---
 <!DOCTYPE html>
 <html>
 
@@ -10,6 +13,7 @@
 </head>
 
 <body>
+    <a id="cardLoc" href="{{ "" | absolute_url }}" hidden></a>
     <script src="random.js"></script>
     <script src="bingo.js"></script>
     <p>
@@ -33,6 +37,7 @@
     <input id="input" type="number">
     <button id="generate" onclick="gen()">Generate</button>
     <p id="cards"></p>
+
     <script>
         function gen() {
             var num = parseInt(document.getElementById('input').value);
@@ -57,6 +62,8 @@
                 p.appendChild(a);
                 p.appendChild(br);
             }
+
+            Bingo.startGame(ids);
         }
     </script>
 </body>

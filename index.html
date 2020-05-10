@@ -1,3 +1,6 @@
+---
+# These dashes make the page have front-matter, so Jekyll will process it
+---
 <!DOCTYPE html>
 <html>
 
@@ -10,7 +13,7 @@
 </head>
 
 <body>
-    <!--TODO: make this page auto-forward to generator.html if no bingo card is specified in the URL-->
+    <a id="callerLoc" href="{{ "caller.html" | absolute_url }}" hidden></a>
     <script src="random.js"></script>
     <script src="bingo.js"></script>
     <script>
@@ -19,12 +22,14 @@
         var card = Bingo.loadCardFromURL();
 
         if (card == null) {
-            // TODO make this redirect to the generator because this should not happen
-            console.log("MAKING A NEW CARD!");
-            card = new Card(Bingo.generateCardId());
+            // The URL parameter must be invalid, so redirect to the generator
+            // TODO have some kind of message so they know what's going on
+            // TODO have some kind of message if there is no JavaScript enabled
+            // so they know what's going on
+            window.location.href = document.getElementById('callerLoc').href;
+        } else {
+            card.bindToTable(table, true);
         }
-
-        card.bindToTable(table, true);
     </script>
 </body>
 
