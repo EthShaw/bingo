@@ -33,23 +33,34 @@
         it out, but this is not currently guaranteed. This project is very Work
         In Progress at the moment.
     </p>
-    Please enter the number of Bingo cards you would like to generate:
-    <input id="input" type="number">
-    <button id="generate" onclick="gen()">Generate</button>
-    <p id="cards"></p>
+    <select disabled>
+        <option>--None Selected--</option>
+    </select>
+    <div id="newCardDiv">
+        Name of card set:
+        <input id="setName" type="number"><br>
+        Number of cards to generate:
+        <input id="numCards" type="number"><br>
+        <label><input type="checkbox" id="useFreespace">Enable free space?</label><br>
+        <button id="createSet" onclick="gen()">Create Cards</button>
+        <p id="cards"></p>
+    </div>
 
     <script>
+        var manager = new CardManager();
+
         function gen() {
-            var num = parseInt(document.getElementById('input').value);
+            var num = parseInt(document.getElementById('numCards').value);
             var p = document.getElementById('cards');
             p.innerText = '';
             var ids = [];
 
-            var href = window.location.href.split('?')[0].replace('generator.html', '');
-            for (var i = 0; i < num; i++) {
+            var href = document.getElementById('cardLoc');
+
+            for (var i = 1; i <= num; i++) {
                 var id;
                 do {
-                    id = Bingo.generateCardId(i);
+                    id = manager.generateCardId(i);
                 } while (ids.includes(id));
 
                 var str = href + '?s=' + id;
@@ -59,11 +70,12 @@
                 a.href = str;
                 a.innerText = str;
 
+                p.appendChild(document.createTextNode('Card ' + i.toString().padStart(3, '0') + ': '));
                 p.appendChild(a);
                 p.appendChild(br);
             }
 
-            Bingo.startGame(ids);
+            manager.startGame(ids);
         }
     </script>
 </body>

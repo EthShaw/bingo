@@ -20,24 +20,21 @@
  * SOFTWARE.
  */
 
-// In case the format ever needs to change, we include this.
-// It is a 16 bit unsigned integer
-var CARD_DATA_VERSION = 0;
+// In case the URL format ever needs to change, we include this.
+// It is a 16 bit unsigned integer.
+var CARD_URL_VERSION = 0;
 
-var freeSpace = true;
+// In case the storage format ever needs to change, we include this.
+// It is a number.
+var CARD_SET_DATA_VERSION = 0.0;
 
-function Bingo() {
-    this.init();
-}
-
-// In this function, everything is initialized
-Bingo.prototype.init = function() {
+// Stores the card states in localStorage
+function CardStateStore() {
     this.CardData = {};
-    this.loadStorage();
-    this.isCaller = false;
+    this.loadCardData();
 }
 
-Bingo.prototype.loadStorage = function() {
+CardStateStore.prototype.loadCardData = function() {
     var json = localStorage.getItem('CardData');
 
     if (json) {
@@ -88,100 +85,41 @@ Bingo.prototype.loadStorage = function() {
                 for (var i = 0; i < keysToDelete.length; i++) {
                     delete this.CardData[keysToDelete[i]];
                 }
-                this.saveStorage();
+                this.saveCardData();
             }
         } catch (err) {
             console.log('There was an error loading the current layout, clearing it!');
             console.error(err);
             this.CardData = {};
-            this.saveStorage();
+            this.saveCardData();
         }
     }
 }
 
-Bingo.prototype.saveStorage = function() {
+CardStateStore.prototype.saveCardData = function() {
     localStorage.setItem('CardData', JSON.stringify(this.CardData));
 }
 
-Bingo.prototype.getStateForCard = function(card) {
-    if (this.isCaller) {
-        var state = Card.EMPTY_STATE();
-
-        for (var row = 0; row < 5; row++) {
-            for (var col = 0; col < 5; col++) {
-                if (this.called.includes(card.numbers[col][row])) {
-                    state[row][col] = true;
-                }
-            }
-        }
-
-        return state;
-    } else {
-        return this.CardData[card.ID] ? this.CardData[card.ID].state : Card.EMPTY_STATE();
-    }
+CardStateStore.prototype.getStateForID = function(cardID) {
+    return this.CardData[cardID] ? this.CardData[cardID].state : Card.EMPTY_STATE();
 }
 
-Bingo.prototype.saveStateForID = function(cardID, state) {
+CardStateStore.prototype.saveStateForCardID = function(cardID, state) {
     this.CardData[cardID] = {
         'timestamp': Date.now(),
         'state': state
     };
-    this.saveStorage();
+    this.saveCardData();
 }
 
-Bingo.prototype.loadCardFromURL = function() {
-    var params = new URLSearchParams(window.location.search);
-    var cardID = params.get('s');
-
-    try {
-        // This will throw if the cardID is null or invalid
-        return new Card(cardID);
-    } catch (err) {
-        console.log('There was an error loading the card from URL!');
-        console.log(err);
-        return null;
-    }
-}
-
-Bingo.prototype.generateCardId = function(num) {
-    var seed = [Date.now() + (Math.floor(Math.random() * 65536) << 24), Date.now() + (Math.floor(Math.random() * 65536) << 24)];
-    var number;
-    if (typeof (num) == 'number') {
-        number = num;
-    } else {
-        number = Math.floor(Math.random() * 1000);
-    }
-    return Card.createCardID(seed, number);
-}
-
-Bingo.prototype.startGame = function() {
-    this.isCaller = true;
-    this.toCall = [];
-    this.called = ['FREE SPACE'];
-
-    for (var i = 1; i <= 75; i++) {
-        this.toCall.push(i);
-    }
-}
-
-Bingo.prototype.nextCall = function() {
-    if (this.toCall.length === 0) {
-        return null;
-    } else {
-        var BINGO = 'BINGO'.split('');
-        var num = this.toCall.splice(Math.floor(this.toCall.length * Math.random()), 1)[0];
-        this.called.push(num);
-        return BINGO[Math.floor((num - 1) / 15)] + num;
-    }
-}
-
-// Bingo is a singleton that handles stuff like loading and saving
-// card data from localStorage
-var Bingo = new Bingo();
+// CardStateStore is a singleton that handles loading and saving data
+// from localStorage
+var CardStateStore = new CardStateStore();
 
 
 function Card(cardID) {
     this.ID = cardID;
+    this.bingoState = Card.EMPTY_STATE();
 
     // + and / are replaced with - and _ to make them URL-safe
     idUnescaped = cardID.replace(/-/g, '+').replace(/_/g, '/');
@@ -203,19 +141,19 @@ function Card(cardID) {
         var version = readUint16(bytes, 0);
         // At some point, this code could be changed if the cardID format
         // is ever changed so other versions would be supported.
-        if (version !== CARD_DATA_VERSION) {
+        if (version !== CARD_URL_VERSION) {
             throw 'Error: invalid cardID version: ' + version;
-        } else if (bytes.length !== 12) {
+        } else if (bytes.length !== 13) {
             throw 'Error: invalid cardID length: ' + bytes.length;
         } else {
             var seed = readUint32Array(bytes, 2, 2);
             this.rng = new Random(seed);
+            this.cardNumber = readUint16(bytes, 10);
+            this.hasFreeSpace = (bytes[12] & 0x80) === 0x80;
         }
     }
 
     this.generateNumbers();
-
-    this.bingoState = Bingo.getStateForCard(this);
 }
 
 // This has to be a function because if it was a variable and a card's state
@@ -234,12 +172,13 @@ Card.EMPTY_STATE = function() {
 // This is the one place where cardIDs are created and encoded. They are then
 // decoded in the Card constructor. `seed` is a Uint32Array, cardNum is an
 // integer no greater than 2^16 - 1
-Card.createCardID = function(seed, cardNum) {
-    var data = new Uint8Array(12);
+Card.createCardID = function(seed, cardNum, hasFreeSpace) {
+    var data = new Uint8Array(13);
 
-    writeUint16(CARD_DATA_VERSION, data, 0);
+    writeUint16(CARD_URL_VERSION, data, 0);
     writeUint32Array(seed, data, 2);
     writeUint16(cardNum, data, 10);
+    data[12] = hasFreeSpace ? 0x80 : 0;
 
     // Removing the trailing equals signs (if there are any) makes the cardID
     // URL-safe AND shortens the cardID. See comment in the card constructor
@@ -248,22 +187,41 @@ Card.createCardID = function(seed, cardNum) {
     return bytesToBase64(data).replace(/=+$/g, '').replace(/\+/g, '-').replace(/\//g, '_');;
 }
 
-// Persists the card's state to localStorage
-Card.prototype.persistState = function() {
-    Bingo.saveStateForID(this.ID, this.bingoState);
+Card.loadFromURL = function() {
+    var params = new URLSearchParams(window.location.search);
+    var cardID = params.get('s');
+
+    try {
+        // This will throw if the cardID is null or invalid
+        var card = new Card(cardID);
+        card.setState(CardStateStore.getStateForID(cardID));
+        return card;
+    } catch (err) {
+        console.log('There was an error loading the card from URL!');
+        console.error(err);
+        return null;
+    }
 }
 
-// Gets the card's current state (used when the caller calls a number)
-Card.prototype.updateState = function() {
-    this.bingoState = Bingo.getStateForCard(this);
+// Persists the card's state to localStorage
+Card.prototype.persistState = function() {
+    CardStateStore.saveStateForCardID(this.ID, this.bingoState);
+}
 
-    for (var col = 0; col < 5; col++) {
-        for (var row = 0; row < 5; row++) {
-            var cell = this.table.children[row + 1].children[col];
-            if (this.bingoState[row][col]) {
-                cell.classList.add('selected');
-            } else {
-                cell.classList.remove('selected');
+// Gets the card's current state (used when the caller calls a number and when
+// the card is initialized)
+Card.prototype.setState = function(state) {
+    this.bingoState = state;
+
+    if (this.table) {
+        for (var col = 0; col < 5; col++) {
+            for (var row = 0; row < 5; row++) {
+                var cell = this.table.children[row + 1].children[col];
+                if (this.bingoState[row][col]) {
+                    cell.classList.add('selected');
+                } else {
+                    cell.classList.remove('selected');
+                }
             }
         }
     }
@@ -277,8 +235,11 @@ Card.prototype.generateNumbers = function() {
         { min: 46, max: 60 },
         { min: 61, max: 75 }
     ];
-
-    // NOTE: numbers are stored in the col,row format instead of row,col
+    
+    // tempNumbers is stored in col,row format for ease of checking for
+    // duplicates, but it is then changed to row,col format when transferred
+    // to numbers.
+    var tempNumbers = [[], [], [], [], []];
     var numbers = [[], [], [], [], []];
 
     for (var col = 0; col < 5; col++) {
@@ -287,12 +248,19 @@ Card.prototype.generateNumbers = function() {
             var rand;
             do {
                 rand = r.min + Math.floor(this.rng.nextDouble() * (r.max - r.min + 1));
-            } while (numbers[col].includes(rand));
+            } while (tempNumbers[col].includes(rand));
 
-            numbers[col][row] = rand;
+            tempNumbers[col][row] = rand;
         }
     }
-    if (freeSpace) {
+
+    for (var row = 0; row < 5; row++) {
+        for (var col = 0; col < 5; col++) {
+            numbers[row][col] = tempNumbers[col][row];
+        }
+    }
+
+    if (this.hasFreeSpace) {
         numbers[2][2] = 'FREE SPACE';
     }
 
@@ -302,6 +270,8 @@ Card.prototype.generateNumbers = function() {
 Card.prototype.bindToTable = function(table, editable) {
     this.table = table;
     table.id = 'table_' + this.cardID;
+
+    table.appendChild(document.createTextNode('Card Number: ' + this.cardNumber.toString().padStart(3, '0')));
 
     var header = document.createElement('tr');
     var headers = 'BINGO'.split('');
@@ -319,7 +289,7 @@ Card.prototype.bindToTable = function(table, editable) {
 
         for (var col = 0; col < 5; col++) {
             var cell = document.createElement('td');
-            var number = this.numbers[col][row].toString();
+            var number = this.numbers[row][col].toString();
             cell.innerText = number;
             cell.id = this.cardID + number;
 
@@ -354,4 +324,128 @@ Card.prototype.bindToTable = function(table, editable) {
     }
 
     document.body.appendChild(table);
+}
+
+
+// Stores Bingo card sets in localStorage
+function Storeroom() {
+    this.loadStorage();
+}
+
+Storeroom.prototype.loadStorage = function() {
+    var json = localStorage.getItem('BingoGames');
+    
+    if (json) {
+        this.BingoGames = JSON.parse(json);
+    } else {
+        this.BingoGames = { VERSION: CARD_SET_DATA_VERSION, sets: [] };
+    }
+
+    if (this.BingoGames.VERSION !== CARD_SET_DATA_VERSION) {
+        console.error("Data invalid!");
+        console.error(json);
+        this.BingoGames = { VERSION: CARD_SET_DATA_VERSION, sets: [] };
+    }
+}
+
+Storeroom.prototype.saveStorage = function() {
+    localStorage.setItem('BingoGames', JSON.stringify(this.BingoGames));
+}
+
+Storeroom.prototype.addSet = function(set) {
+    this.BingoGames.sets.push(set);
+    this.saveStorage();
+}
+
+
+// Includes the caller and code to create and manage bingo card sets
+function CardManager() {
+    this.storeroom = new Storeroom();
+}
+
+CardManager.prototype.generateCardId = function(num, hasFreeSpace) {
+    var seed = [Date.now() + (Math.floor(Math.random() * 65536) << 24), Date.now() + (Math.floor(Math.random() * 65536) << 24)];
+    var number;
+    if (typeof (num) == 'number') {
+        number = num;
+    } else {
+        number = Math.floor(Math.random() * 1000);
+    }
+    return Card.createCardID(seed, number, hasFreeSpace);
+}
+
+CardManager.prototype.newSet = function(name, count, enableFreeSpace) {
+    var set = { name: name, cards: [], freeSpace: enableFreeSpace };
+
+    for (var i = 1; i <= count; i++) {
+        var id;
+
+        do {
+            id = this.generateCardId(i, enableFreeSpace);
+        } while (set.cards.includes(id));
+
+        set.cards.push(id);
+    }
+
+    this.storeroom.addSet(set);
+}
+
+
+
+function Caller(cards) {
+    this.cards = cards.cards;
+    this.liveCards = [];
+    this.startGame();
+}
+
+Caller.prototype.startGame = function() {
+    this.toCall = [];
+    this.called = ['FREE SPACE'];
+
+    for (var i = 1; i <= 75; i++) {
+        this.toCall.push(i);
+    }
+}
+
+Caller.prototype.nextCall = function() {
+    if (this.toCall.length === 0) {
+        return null;
+    } else {
+        var BINGO = 'BINGO'.split('');
+        var num = this.toCall.splice(Math.floor(this.toCall.length * Math.random()), 1)[0];
+        this.called.push(num);
+
+        this.updateLiveCards();
+
+        return BINGO[Math.floor((num - 1) / 15)] + num;
+    }
+}
+
+Caller.prototype.showCard = function(table, cardNum) {
+    var id = this.cards[cardNum - 1];
+    this.liveCards[cardNum] = new Card(id);
+
+    this.liveCards[cardNum].bindToTable(table)
+    
+    this.updateLiveCards();
+}
+
+Caller.prototype.updateLiveCards = function() {
+    for (var i = 0; i < this.liveCards.length; i++) {
+        if (this.liveCards[i]) {
+            var card = this.liveCards[i];
+
+            var state = Card.EMPTY_STATE();
+
+            for (var row = 0; row < 5; row++) {
+                for (var col = 0; col < 5; col++) {
+                    if (this.called.includes(card.numbers[row][col])) {
+                        state[row][col] = true;
+                    }
+                }
+            }
+
+            card.setState(state);
+        }
+    }
 }

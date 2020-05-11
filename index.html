@@ -19,7 +19,7 @@
     <script>
         var table = document.createElement('table');
 
-        var card = Bingo.loadCardFromURL();
+        var card = Card.loadFromURL();
 
         if (card == null) {
             // The URL parameter must be invalid, so redirect to the generator
