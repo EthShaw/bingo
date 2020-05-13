@@ -28,6 +28,25 @@ var CARD_URL_VERSION = 0;
 // It is a number.
 var CARD_SET_DATA_VERSION = 0.0;
 
+// IE support
+if (!Array.prototype.includes) {
+    Array.prototype.includes = function(x) { return this.indexOf(x) !== -1; };
+}
+if (!String.prototype.padStart) {
+    String.prototype.padStart = function(targetLength, padStr) {
+        padStr = padStr || ' ';
+        var newStr = this.valueOf();
+        var idx = 0;
+        
+        while (newStr.length < targetLength) {
+            newStr = padStr[idx++ % padStr.length] + newStr;
+        }
+
+        return newStr;
+    };
+}
+
+
 // Stores the card states in localStorage
 function CardStateStore() {
     this.CardData = {};
@@ -269,7 +288,7 @@ Card.prototype.generateNumbers = function() {
 
 Card.prototype.bindToTable = function(table, editable) {
     this.table = table;
-    table.id = 'table_' + this.cardID;
+    //table.id = 'table_' + this.ID;
 
     table.appendChild(document.createTextNode('Card Number: ' + this.cardNumber.toString().padStart(3, '0')));
 
@@ -322,17 +341,15 @@ Card.prototype.bindToTable = function(table, editable) {
         }
         table.append(rowElem);
     }
-
-    document.body.appendChild(table);
 }
 
 
-// Stores Bingo card sets in localStorage
-function Storeroom() {
+// Includes the code to create, manage, and store (in localStorage) bingo card sets
+function CardManager() {
     this.loadStorage();
 }
 
-Storeroom.prototype.loadStorage = function() {
+CardManager.prototype.loadStorage = function() {
     var json = localStorage.getItem('BingoGames');
     
     if (json) {
@@ -348,19 +365,17 @@ Storeroom.prototype.loadStorage = function() {
     }
 }
 
-Storeroom.prototype.saveStorage = function() {
+CardManager.prototype.saveStorage = function() {
     localStorage.setItem('BingoGames', JSON.stringify(this.BingoGames));
 }
 
-Storeroom.prototype.addSet = function(set) {
+CardManager.prototype.addSet = function(set) {
     this.BingoGames.sets.push(set);
     this.saveStorage();
 }
 
-
-// Includes the caller and code to create and manage bingo card sets
-function CardManager() {
-    this.storeroom = new Storeroom();
+CardManager.prototype.getAllSets = function() {
+    return this.BingoGames.sets;
 }
 
 CardManager.prototype.generateCardId = function(num, hasFreeSpace) {
@@ -387,13 +402,19 @@ CardManager.prototype.newSet = function(name, count, enableFreeSpace) {
         set.cards.push(id);
     }
 
-    this.storeroom.addSet(set);
+    this.addSet(set);
+    return set;
+}
+
+CardManager.prototype.deleteSetAtIdx = function(idx) {
+    this.BingoGames.sets.splice(idx, 1);
+    this.saveStorage();
 }
 
 
 
-function Caller(cards) {
-    this.cards = cards.cards;
+function Caller(cardSet) {
+    this.cards = cardSet.cards;
     this.liveCards = [];
     this.startGame();
 }
@@ -428,6 +449,14 @@ Caller.prototype.showCard = function(table, cardNum) {
     this.liveCards[cardNum].bindToTable(table)
     
     this.updateLiveCards();
+}
+
+Caller.prototype.unShowCard = function(table, cardNum) {
+    this.liveCards[cardNum] = undefined;
+
+    while (table.firstChild) {
+        table.removeChild(table.lastChild);
+    }
 }
 
 Caller.prototype.updateLiveCards = function() {

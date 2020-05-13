@@ -16,67 +16,269 @@
     <a id="cardLoc" href="{{ "" | absolute_url }}" hidden></a>
     <script src="random.js"></script>
     <script src="bingo.js"></script>
+    <noscript>
+        <h1>Sorry, you must have JavaScript enabled to use this site.</h1>
+    </noscript>
     <p>
-        Welcome to the free online Bingo card generator. I made this generator
+        Welcome to my free online Bingo card generator.<!-- I made this generator
         because (from my very, very brief research) it seemed like there was a
         lack of free online (easily-findable) bingo card generators, and I had
         free time. When I say "free," I mean that it doesn't cost anything, no
         matter how many bingo cards you want to generate, not that it's free
-        for a certain amount and then charges for more. It's not perfect, but
+        for a certain amount and then charges for more. -->It's not perfect, but
         for anyone that finds it, I hope it's useful.
     </p>
     <p>
         When you generate a bingo card, all the data of the card is stored in
         its URL, so your bingo card will never expire as long as this website
-        exists. We currently only support 75 ball bingo. In theory (and from my
-        tests), your bingo cards should also be printable if you wish to print
-        it out, but this is not currently guaranteed. This project is very Work
-        In Progress at the moment.
+        exists. We currently only support 75 ball bingo. From my tests, your
+        bingo cards should also be printable if you wish to print it out, but
+        this is not currently guaranteed. WARNING: this project is VERY Work In
+        Progress at the moment. It is not guaranteed that any bingo cards
+        created now will continue to work in the near future because the site
+        is not yet complete.
     </p>
-    <select disabled>
-        <option>--None Selected--</option>
+    <!--
+        TODO make a system where you can distribute one URL to everyone, and people can potentially get the same card,
+        but it's easier because there's only one URL
+    -->
+
+    <div id="divCaller" hidden>
+        <button id="btnNextCall">Call Next Number</button>
+        <br>
+        <textarea rows="10" id="divCalls" disabled></textarea>
+        <input id="textCallerCardNum" type="number">
+        <button id="btnCardCheck">Check Card</button>
+        <table id="tableCardCheck"></table>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+    </div>
+
+    <select id="selectSet">
+        <option value="new" selected>--Create New Set--</option>
     </select>
-    <div id="newCardDiv">
+    <div id="divEdit">
+        <button id="btnRename" disabled>Rename (not yet implemented)</button>
+        <button id="btnDelete">Delete</button>
+        <button id="btnStartGame">Start Game</button>
+    </div>
+    <div id="divNewCards">
         Name of card set:
-        <input id="setName" type="number"><br>
+        <input id="textSetName" type="text"><br>
         Number of cards to generate:
-        <input id="numCards" type="number"><br>
-        <label><input type="checkbox" id="useFreespace">Enable free space?</label><br>
-        <button id="createSet" onclick="gen()">Create Cards</button>
+        <!--TODO limit the input to only valid integers-->
+        <input id="textNumCards" type="number"><br>
+        <label><input type="checkbox" id="checkboxUseFreeSpace">Enable free space?</label><br>
+        <span class="error" id="pErrMsg" hidden></span><br>
+        <button id="btnCreateSet">Create Cards</button>
         <p id="cards"></p>
+    </div>
+    <div id="divCardList">
+
     </div>
 
     <script>
-        var manager = new CardManager();
+        window.addEventListener('DOMContentLoaded', function() {
+            var manager = new CardManager();
+            var selectSet = document.getElementById('selectSet');
+            var divNewCards = document.getElementById('divNewCards');
+            var divEdit = document.getElementById('divEdit');
+            var btnCreateSet = document.getElementById('btnCreateSet');
+            var btnRename = document.getElementById('btnRename');
+            var btnDelete = document.getElementById('btnDelete');
+            var btnStartGame = document.getElementById('btnStartGame');
+            var textSetName = document.getElementById('textSetName');
+            var textNumCards = document.getElementById('textNumCards');
+            var checkboxUseFreeSpace = document.getElementById('checkboxUseFreeSpace');
+            var pErrMsg = document.getElementById('pErrMsg');
+            var divCardList = document.getElementById('divCardList');
+            var BINGO_URL = document.getElementById('cardLoc');
 
-        function gen() {
-            var num = parseInt(document.getElementById('numCards').value);
-            var p = document.getElementById('cards');
-            p.innerText = '';
-            var ids = [];
+            var caller, boundCard;
+            var btnNextCall = document.getElementById('btnNextCall');
+            var divCalls = document.getElementById('divCalls');
+            var textCallerCardNum = document.getElementById('textCallerCardNum');
+            var tableCardCheck = document.getElementById('tableCardCheck');
+            var btnCardCheck = document.getElementById('btnCardCheck');
 
-            var href = document.getElementById('cardLoc');
+            function updateSelectState() {
+                // Delete all the old cards from the card list
+                while (divCardList.firstChild) {
+                    divCardList.removeChild(divCardList.lastChild);
+                }
 
-            for (var i = 1; i <= num; i++) {
-                var id;
-                do {
-                    id = manager.generateCardId(i);
-                } while (ids.includes(id));
+                if (selectSet.value === 'new') {
+                    divEdit.hidden = true;
+                    btnCreateSet.hidden = false;
 
-                var str = href + '?s=' + id;
-                var a = document.createElement('a');
-                var br = document.createElement('br');
+                    checkboxUseFreeSpace.disabled = false;
+                    textSetName.disabled = false;
+                    textNumCards.disabled = false;
+                    
+                    checkboxUseFreeSpace.checked = true;
+                    textSetName.value = '';
+                    textNumCards.value = 30;
+                    
+                    // TODO this is very hacky and a very temporary solution that makes the code worse,
+                    // when the real solution should be to make the code better in the first place.
+                    checkValidName.apply({ value: '' });
+                } else {
+                    divEdit.hidden = false;
+                    btnCreateSet.hidden = true;
 
-                a.href = str;
-                a.innerText = str;
+                    checkboxUseFreeSpace.disabled = true;
+                    textSetName.disabled = true;
+                    textNumCards.disabled = true;
 
-                p.appendChild(document.createTextNode('Card ' + i.toString().padStart(3, '0') + ': '));
-                p.appendChild(a);
-                p.appendChild(br);
+                    var set = manager.getAllSets()[parseInt(selectSet.value)];
+                    var ids = set.cards;
+
+                    checkboxUseFreeSpace.checked = set.freeSpace;
+                    textSetName.value = set.name;
+                    textNumCards.value = ids.length;
+                    pErrMsg.hidden = true;
+
+                    // Populate the card list
+                    for (var i = 0; i < ids.length; i++) {
+                        var id = ids[i];
+
+                        var str = BINGO_URL + '?s=' + id;
+                        var a = document.createElement('a');
+                        var br = document.createElement('br');
+
+                        a.href = str;
+                        a.innerText = str;
+
+                        divCardList.appendChild(document.createTextNode('Card ' + i.toString().padStart(3, '0') + ': '));
+                        divCardList.appendChild(a);
+                        divCardList.appendChild(br);
+                    }
+                }
             }
 
-            manager.startGame(ids);
-        }
+            function checkValidName(event) {
+                var name = this.value;
+
+                // If the name is empty, don't display any errors
+                if (name.length === 0) {
+                    pErrMsg.hidden = true;
+                    btnCreateSet.disabled = true;
+                    return;
+                }
+
+                var sets = manager.getAllSets();
+                
+                for (var i = 0; i < sets.length; i++) {
+                    var set = sets[i];
+
+                    if (name === set.name) {
+                        pErrMsg.innerText = 'Error: A set already exists with that name!';
+                        pErrMsg.hidden = false;
+                        btnCreateSet.disabled = true;
+                        return;
+                    }
+                }
+
+                pErrMsg.hidden = true;
+                btnCreateSet.disabled = false;
+            }
+
+            function gen() {
+                var name = textSetName.value;
+                var num = parseInt(textNumCards.value);
+                var p = document.getElementById('cards');
+                p.innerText = '';
+                var ids = [];
+                var useFreeSpace = checkboxUseFreeSpace.checked;
+                var sets = manager.getAllSets();
+
+                for (var i = 0; i < sets.length; i++) {
+                    var set = sets[i];
+
+                    if (name === set.name) {
+                        pErrMsg.innerText = 'Error: A set already exists with that name!';
+                        pErrMsg.hidden = false;
+                        return;
+                    }
+                }
+
+                var set = manager.newSet(name, num, useFreeSpace);
+                
+                var option = document.createElement('option');
+                option.value = manager.getAllSets().length - 1;
+                option.innerText = sets[i].name;
+                selectSet.appendChild(option);
+
+                selectSet.value = option.value;
+                updateSelectState.apply(selectSet);
+            }
+
+            function deleteSelectedSet() {
+                var set = manager.getAllSets()[parseInt(selectSet.value)];
+                // TODO don't use window.confirm, use a custom html approach
+                var sure = window.confirm("Are you sure you want to delete the set named '" + set.name + "'?");
+
+                if (sure) {
+                    manager.deleteSetAtIdx(selectSet.value);
+                    selectSet.remove(selectSet.selectedIndex);
+
+                    // TODO we actually have to renumber all the values of all the sets in the select menu if it is not the last set that's deleted
+                    selectSet.value = 'new';
+                }
+            }
+
+            function startGame() {
+                var set = manager.getAllSets()[parseInt(selectSet.value)];
+                divCaller.hidden = false;
+                caller = new Caller(set);
+            }
+
+            function nextCall() {
+                var next = caller.nextCall();
+                divCalls.value = next + "\n" + divCalls.value;
+                //divCalls.appendChild(document.createTextNode(next));
+                //divCalls.appendChild(document.createElement('br'));
+            }
+
+            function checkCard() {
+                var num = parseInt(textCallerCardNum.value);
+
+                if (boundCard) {
+                    caller.unShowCard(tableCardCheck, boundCard);
+                    boundCard = null;
+                }
+
+                boundCard = num;
+
+                caller.showCard(tableCardCheck, num);
+            }
+
+            selectSet.addEventListener('change', updateSelectState);
+            btnCreateSet.addEventListener('click', gen);
+            textSetName.addEventListener('input', checkValidName);
+            btnDelete.addEventListener('click', deleteSelectedSet);
+            btnStartGame.addEventListener('click', startGame);
+            btnNextCall.addEventListener('click', nextCall);
+            btnCardCheck.addEventListener('click', checkCard);
+
+            var sets = manager.getAllSets();
+
+            for (var i = 0; i < sets.length; i++) {
+                var option = document.createElement('option');
+                option.value = i;
+                option.innerText = sets[i].name;
+                selectSet.appendChild(option);
+            }
+
+            updateSelectState();
+        });
     </script>
 </body>
 
