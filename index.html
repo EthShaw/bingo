@@ -13,11 +13,15 @@
 </head>
 
 <body>
+    <noscript>
+        <h1>Sorry, you must have JavaScript enabled in your browser to use this.</h1>
+    </noscript>
     <a id="callerLoc" href="{{ "caller.html" | absolute_url }}" hidden></a>
     <script src="random.js"></script>
     <script src="bingo.js"></script>
     <script>
         var table = document.createElement('table');
+        document.body.appendChild(table);
 
         var card = Card.loadFromURL();
 
