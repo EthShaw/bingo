@@ -1,3 +1,6 @@
 # Local jekyll
 .jekyll-metadata
 _site/
+
+# VS Code
+.vscode/

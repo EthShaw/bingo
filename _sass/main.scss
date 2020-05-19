@@ -1,0 +1,100 @@
+$card-color: #F33;
+
+div.bingo-card {
+    position: relative;
+}
+
+body > div.bingo-card {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+table,
+tr,
+td,
+th {
+    border: 1px solid black;
+    border-collapse: collapse;
+    text-align: center;
+    padding: 0;
+}
+
+.bingo-card {
+    font-size: calc(var(--unit-size) / 5);
+    text-align: center;
+    font-family: sans-serif;
+}
+
+.bingo-table {
+    width: calc(var(--unit-size) * 5);
+    height: calc(var(--unit-size) * 5);
+    table-layout: fixed;
+    background-color: white;
+}
+
+table.bingo-markers-table {
+    width: calc(var(--unit-size) * 5);
+    height: calc(var(--unit-size) * 5);
+    table-layout: fixed;
+    background-color: rgba(0, 0, 0, 0);
+    pointer-events: none;
+    position: absolute;
+    box-sizing: border-box;
+    bottom: calc(var(--unit-size) / 2);
+}
+
+table.bingo-table-header {
+    font-size: 1.5em;
+    width: calc(var(--unit-size) * 5);
+    height: var(--unit-size);
+    table-layout: fixed;
+    color: white;
+    background-color: $card-color;
+}
+
+table.bingo-table-header th {
+    border: 1px solid $card-color;
+    border-collapse: collapse;
+}
+
+.bingo-controls {
+    font-size: 1.5em;
+}
+
+.bingo-numbers-block {
+    font-size: 3em;
+    background-color: $card-color;
+    padding: calc(var(--unit-size) / 2);
+    margin: auto;
+    position: absolute;
+    left: calc(50% - calc(var(--unit-size) * 3));
+}
+
+td,
+th {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.editable td {
+    cursor: pointer;
+}
+
+td.marker.selected div {
+    width: 90%;
+    height: 90%;
+    margin: auto;
+    background-color: red;
+    opacity: 0.75;
+    border-color: white;
+    border-radius: 100%;
+}
+
+span.error {
+    color: red;
+}

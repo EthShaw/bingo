@@ -37,7 +37,7 @@ if (!String.prototype.padStart) {
         padStr = padStr || ' ';
         var newStr = this.valueOf();
         var idx = 0;
-        
+
         while (newStr.length < targetLength) {
             newStr = padStr[idx++ % padStr.length] + newStr;
         }
@@ -113,15 +113,15 @@ CardStateStore.prototype.loadCardData = function() {
             this.saveCardData();
         }
     }
-}
+};
 
 CardStateStore.prototype.saveCardData = function() {
     localStorage.setItem('CardData', JSON.stringify(this.CardData));
-}
+};
 
 CardStateStore.prototype.getStateForID = function(cardID) {
     return this.CardData[cardID] ? this.CardData[cardID].state : Card.EMPTY_STATE();
-}
+};
 
 CardStateStore.prototype.saveStateForCardID = function(cardID, state) {
     this.CardData[cardID] = {
@@ -129,7 +129,7 @@ CardStateStore.prototype.saveStateForCardID = function(cardID, state) {
         'state': state
     };
     this.saveCardData();
-}
+};
 
 // CardStateStore is a singleton that handles loading and saving data
 // from localStorage
@@ -186,7 +186,7 @@ Card.EMPTY_STATE = function() {
         [false, false, false, false, false],
         [false, false, false, false, false]
     ];
-}
+};
 
 // This is the one place where cardIDs are created and encoded. They are then
 // decoded in the Card constructor. `seed` is a Uint32Array, cardNum is an
@@ -204,7 +204,7 @@ Card.createCardID = function(seed, cardNum, hasFreeSpace) {
     // for more information. Replacing + and / with - and _ makes the cardID
     // URL-safe.
     return bytesToBase64(data).replace(/=+$/g, '').replace(/\+/g, '-').replace(/\//g, '_');;
-}
+};
 
 Card.loadFromURL = function() {
     var params = new URLSearchParams(window.location.search);
@@ -220,31 +220,31 @@ Card.loadFromURL = function() {
         console.error(err);
         return null;
     }
-}
+};
 
 // Persists the card's state to localStorage
 Card.prototype.persistState = function() {
     CardStateStore.saveStateForCardID(this.ID, this.bingoState);
-}
+};
 
 // Gets the card's current state (used when the caller calls a number and when
 // the card is initialized)
 Card.prototype.setState = function(state) {
     this.bingoState = state;
 
-    if (this.table) {
+    if (this.numberGrid) {
         for (var col = 0; col < 5; col++) {
             for (var row = 0; row < 5; row++) {
-                var cell = this.table.children[row + 1].children[col];
+                var marker = this.numberGrid[row][col].marker;
                 if (this.bingoState[row][col]) {
-                    cell.classList.add('selected');
+                    marker.classList.add('selected');
                 } else {
-                    cell.classList.remove('selected');
+                    marker.classList.remove('selected');
                 }
             }
         }
     }
-}
+};
 
 Card.prototype.generateNumbers = function() {
     var ranges = [
@@ -254,7 +254,7 @@ Card.prototype.generateNumbers = function() {
         { min: 46, max: 60 },
         { min: 61, max: 75 }
     ];
-    
+
     // tempNumbers is stored in col,row format for ease of checking for
     // duplicates, but it is then changed to row,col format when transferred
     // to numbers.
@@ -284,62 +284,153 @@ Card.prototype.generateNumbers = function() {
     }
 
     this.numbers = numbers;
-}
+};
 
-Card.prototype.bindToTable = function(table, editable) {
-    this.table = table;
-    //table.id = 'table_' + this.ID;
+Card.prototype.bindToDiv = function(div, editable) {
+    var theCard = this;
+    this.div = div;
 
-    table.appendChild(document.createTextNode('Card Number: ' + this.cardNumber.toString().padStart(3, '0')));
+    div.classList.add('bingo-card');
 
-    var header = document.createElement('tr');
-    var headers = 'BINGO'.split('');
-
-    for (var i = 0; i < 5; i++) {
-        var h = document.createElement('th');
-        h.innerText = headers[i];
-        header.appendChild(h);
+    if (editable) {
+        div.classList.add('editable');
     }
 
-    table.append(header);
+    var divControls = document.createElement('div');
+    var divCard = document.createElement('div');
+
+    div.appendChild(divControls);
+    div.appendChild(divCard);
+
+    // Set up the card controls
+    // TODO add button to view printable version, which will hide the controls div
+    var textCardNum = document.createTextNode('Card Number: ' + this.cardNumber.toString().padStart(3, '0'));
+    divControls.appendChild(textCardNum);
+    divControls.classList.add('bingo-controls');
+
+    if (editable) {
+        var btnClear = document.createElement('button');
+        btnClear.innerText = 'Clear Card';
+        divControls.appendChild(btnClear);
+
+        btnClear.addEventListener('click', function() {
+            theCard.setState(Card.EMPTY_STATE());
+            theCard.persistState();
+        });
+    }
+
+
+    // Set up the card itself
+    divCard.classList.add('bingo-numbers-block');
+
+    // Header
+    var header = document.createElement('table');
+    var headerRow = document.createElement('tr');
+    divCard.appendChild(header);
+    header.appendChild(headerRow);
+
+    header.classList.add('bingo-table-header');
+
+    var headings = 'BINGO'.split('');
+
+    for (var i = 0; i < 5; i++) {
+        var th = document.createElement('th');
+        th.innerText = headings[i];
+        headerRow.appendChild(th);
+    }
+
+    // Numbers and markers
+    var tableNums = document.createElement('table');
+    var tableMarkers = document.createElement('table');
+    divCard.appendChild(tableNums);
+    divCard.appendChild(tableMarkers);
+
+    tableNums.classList.add('bingo-table');
+    tableMarkers.classList.add('bingo-markers-table');
+
+    this.numberGrid = [];
 
     for (var row = 0; row < 5; row++) {
-        var rowElem = document.createElement('tr');
+        var trNumRow = document.createElement('tr');
+        var trMarkerRow = document.createElement('tr');
+        tableNums.appendChild(trNumRow);
+        tableMarkers.appendChild(trMarkerRow);
+
+        var gridRow = [];
 
         for (var col = 0; col < 5; col++) {
-            var cell = document.createElement('td');
             var number = this.numbers[row][col].toString();
-            cell.innerText = number;
-            cell.id = this.cardID + number;
 
-            rowElem.appendChild(cell);
+            var tdCell = document.createElement('td');
 
-            cell.dataset.row = row;
-            cell.dataset.col = col;
+            trNumRow.appendChild(tdCell);
+
+            tdCell.innerText = number;
+            tdCell.dataset.row = row;
+            tdCell.dataset.col = col;
+
+            var tdMarker = document.createElement('td');
+            var divMarker = document.createElement('div');
+
+            tdMarker.classList.add('marker');
+            tdMarker.appendChild(divMarker);
+            trMarkerRow.appendChild(tdMarker);
 
             if (this.bingoState[row][col]) {
-                cell.classList.add('selected');
+                tdMarker.classList.add('selected');
             }
+
+            var cell = { cell: tdCell, marker: tdMarker };
+            gridRow.push(cell);
 
             if (editable) {
-                // TODO this seems hacky
-                cell.card = this;
-                cell.onclick = function() {
-                    var r = this.dataset.row;
-                    var c = this.dataset.col;
+                tdCell.bingoCard = this;
 
-                    this.card.bingoState[r][c] = !this.card.bingoState[r][c];
-                    this.card.persistState();
+                tdCell.addEventListener('click', function() {
+                    var r = parseInt(this.dataset.row);
+                    var c = parseInt(this.dataset.col);
 
-                    if (this.card.bingoState[r][c]) {
-                        this.classList.add('selected');
+                    this.bingoCard.bingoState[r][c] = !this.bingoCard.bingoState[r][c];
+                    this.bingoCard.persistState();
+
+                    var marker = this.bingoCard.numberGrid[r][c].marker;
+
+                    if (this.bingoCard.bingoState[r][c]) {
+                        marker.classList.add('selected');
                     } else {
-                        this.classList.remove('selected');
+                        marker.classList.remove('selected');
                     }
-                }
+                });
             }
         }
-        table.append(rowElem);
+
+        this.numberGrid.push(gridRow);
+    }
+
+    this.updateSize();
+};
+
+Card.prototype.unbindFromDiv = function() {
+    this.div = null;
+};
+
+// Updates the size of the size of the card to match the div it is located in
+Card.prototype.updateSize = function() {
+    // If we're not bound to a div, we do nothing.
+    if (this.div) {
+        var widthUnit = this.div.clientWidth / 6;
+        var heightUnit = this.div.clientHeight / 7;
+
+        var size = Math.min(widthUnit, heightUnit);
+
+        // Make sure every time something changes, this is tested both with and
+        // without css variable support.
+        if (supportsCSSVariables()) {
+            this.div.style.setProperty('--unit-size', size + 'px');
+        } else {
+            // TODO implement
+            throw "Error: not yet implemented!";
+        }
     }
 }
 
@@ -351,7 +442,7 @@ function CardManager() {
 
 CardManager.prototype.loadStorage = function() {
     var json = localStorage.getItem('BingoGames');
-    
+
     if (json) {
         this.BingoGames = JSON.parse(json);
     } else {
@@ -359,24 +450,24 @@ CardManager.prototype.loadStorage = function() {
     }
 
     if (this.BingoGames.VERSION !== CARD_SET_DATA_VERSION) {
-        console.error("Data invalid!");
+        console.error('Data invalid!');
         console.error(json);
         this.BingoGames = { VERSION: CARD_SET_DATA_VERSION, sets: [] };
     }
-}
+};
 
 CardManager.prototype.saveStorage = function() {
     localStorage.setItem('BingoGames', JSON.stringify(this.BingoGames));
-}
+};
 
 CardManager.prototype.addSet = function(set) {
     this.BingoGames.sets.push(set);
     this.saveStorage();
-}
+};
 
 CardManager.prototype.getAllSets = function() {
     return this.BingoGames.sets;
-}
+};
 
 CardManager.prototype.generateCardId = function(num, hasFreeSpace) {
     var seed = [Date.now() + (Math.floor(Math.random() * 65536) << 24), Date.now() + (Math.floor(Math.random() * 65536) << 24)];
@@ -387,7 +478,7 @@ CardManager.prototype.generateCardId = function(num, hasFreeSpace) {
         number = Math.floor(Math.random() * 1000);
     }
     return Card.createCardID(seed, number, hasFreeSpace);
-}
+};
 
 CardManager.prototype.newSet = function(name, count, enableFreeSpace) {
     var set = { name: name, cards: [], freeSpace: enableFreeSpace };
@@ -404,12 +495,12 @@ CardManager.prototype.newSet = function(name, count, enableFreeSpace) {
 
     this.addSet(set);
     return set;
-}
+};
 
 CardManager.prototype.deleteSetAtIdx = function(idx) {
     this.BingoGames.sets.splice(idx, 1);
     this.saveStorage();
-}
+};
 
 
 
@@ -426,7 +517,7 @@ Caller.prototype.startGame = function() {
     for (var i = 1; i <= 75; i++) {
         this.toCall.push(i);
     }
-}
+};
 
 Caller.prototype.nextCall = function() {
     if (this.toCall.length === 0) {
@@ -440,24 +531,25 @@ Caller.prototype.nextCall = function() {
 
         return BINGO[Math.floor((num - 1) / 15)] + num;
     }
-}
+};
 
-Caller.prototype.showCard = function(table, cardNum) {
+Caller.prototype.showCard = function(div, cardNum) {
     var id = this.cards[cardNum - 1];
     this.liveCards[cardNum] = new Card(id);
 
-    this.liveCards[cardNum].bindToTable(table)
-    
-    this.updateLiveCards();
-}
+    this.liveCards[cardNum].bindToDiv(div)
 
-Caller.prototype.unShowCard = function(table, cardNum) {
+    this.updateLiveCards();
+};
+
+Caller.prototype.unShowCard = function(div, cardNum) {
+    this.liveCards[cardNum].unbindFromDiv();
     this.liveCards[cardNum] = undefined;
 
-    while (table.firstChild) {
-        table.removeChild(table.lastChild);
+    while (div.firstChild) {
+        div.removeChild(div.lastChild);
     }
-}
+};
 
 Caller.prototype.updateLiveCards = function() {
     for (var i = 0; i < this.liveCards.length; i++) {
@@ -477,4 +569,4 @@ Caller.prototype.updateLiveCards = function() {
             card.setState(state);
         }
     }
-}
+};

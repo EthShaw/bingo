@@ -6,9 +6,12 @@
 
 <head>
     <title>Bingo Card</title>
-    <link rel="stylesheet" type="text/css" href="bingo.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
+        integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="assets/css/styles.css">
     <script src="thirdparty/base64-typedarrays.js"></script>
     <script src="binaryIOUtils.js"></script>
+    <script src="polyfills.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
@@ -16,12 +19,12 @@
     <noscript>
         <h1>Sorry, you must have JavaScript enabled in your browser to use this.</h1>
     </noscript>
-    <a id="callerLoc" href="{{ "caller.html" | absolute_url }}" hidden></a>
+    <a id="makerLoc" href="{{ "maker.html" | absolute_url }}" hidden></a>
     <script src="random.js"></script>
     <script src="bingo.js"></script>
     <script>
-        var table = document.createElement('table');
-        document.body.appendChild(table);
+        var div = document.createElement('div');
+        document.body.appendChild(div);
 
         var card = Card.loadFromURL();
 
@@ -30,10 +33,14 @@
             // TODO have some kind of message so they know what's going on
             // TODO have some kind of message if there is no JavaScript enabled
             // so they know what's going on
-            window.location.href = document.getElementById('callerLoc').href;
+            window.location.href = document.getElementById('makerLoc').href;
         } else {
-            card.bindToTable(table, true);
+            card.bindToDiv(div, true);
         }
+
+        window.addEventListener('resize', function() {
+            card.updateSize();
+        });
     </script>
 </body>
 

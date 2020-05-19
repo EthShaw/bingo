@@ -6,9 +6,12 @@
 
 <head>
     <title>Bingo</title>
-    <link rel="stylesheet" type="text/css" href="bingo.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
+        integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="assets/css/styles.css">
     <script src="thirdparty/base64-typedarrays.js"></script>
     <script src="binaryIOUtils.js"></script>
+    <script src="polyfills.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
@@ -25,7 +28,7 @@
         lack of free online (easily-findable) bingo card generators, and I had
         free time. When I say "free," I mean that it doesn't cost anything, no
         matter how many bingo cards you want to generate, not that it's free
-        for a certain amount and then charges for more. -->It's not perfect, but
+        for a certain amount and then charges for more.--> It's not perfect, but
         for anyone that finds it, I hope it's useful.
     </p>
     <p>
@@ -36,11 +39,15 @@
         this is not currently guaranteed. WARNING: this project is VERY Work In
         Progress at the moment. It is not guaranteed that any bingo cards
         created now will continue to work in the near future because the site
-        is not yet complete.
+        is not yet complete. NOTE: currently, when printing you must chose to
+        print background graphics (sometimes found under More Options).
     </p>
     <!--
         TODO make a system where you can distribute one URL to everyone, and people can potentially get the same card,
         but it's easier because there's only one URL
+    -->
+    <!--
+        TODO: make a favicon
     -->
 
     <div id="divCaller" hidden>
@@ -49,7 +56,7 @@
         <textarea rows="10" id="divCalls" disabled></textarea>
         <input id="textCallerCardNum" type="number">
         <button id="btnCardCheck">Check Card</button>
-        <table id="tableCardCheck"></table>
+        <div id="divCardCheck"></div>
         <br>
         <br>
         <br>
@@ -105,8 +112,11 @@
             var btnNextCall = document.getElementById('btnNextCall');
             var divCalls = document.getElementById('divCalls');
             var textCallerCardNum = document.getElementById('textCallerCardNum');
-            var tableCardCheck = document.getElementById('tableCardCheck');
+            var divCardCheck = document.getElementById('divCardCheck');
             var btnCardCheck = document.getElementById('btnCardCheck');
+
+            divCardCheck.style.width = '300px';
+            divCardCheck.style.height = '300px';
 
             function updateSelectState() {
                 // Delete all the old cards from the card list
@@ -251,13 +261,18 @@
                 var num = parseInt(textCallerCardNum.value);
 
                 if (boundCard) {
-                    caller.unShowCard(tableCardCheck, boundCard);
+                    // In case there is an error, null boundCard first so it is gone.
+                    // This is a temporary workaround that fixes if the user types
+                    // a card number that is out of range of the cards available.
+                    // NOT A PERMANENT SOLUTION
+                    var tempCard = boundCard;
                     boundCard = null;
+                    caller.unShowCard(divCardCheck, tempCard);
                 }
 
                 boundCard = num;
 
-                caller.showCard(tableCardCheck, num);
+                caller.showCard(divCardCheck, num);
             }
 
             selectSet.addEventListener('change', updateSelectState);
