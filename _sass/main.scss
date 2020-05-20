@@ -85,14 +85,22 @@ th {
     cursor: pointer;
 }
 
-td.marker.selected div {
+td.marker div {
     width: 90%;
     height: 90%;
     margin: auto;
     background-color: red;
-    opacity: 0.75;
+    opacity: 0;
     border-color: white;
     border-radius: 100%;
+}
+
+td.free-space {
+    font-size: 0.45em;
+}
+
+td.marker.selected div {
+    opacity: 0.75;
 }
 
 span.error {

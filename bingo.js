@@ -407,6 +407,11 @@ Card.prototype.bindToDiv = function(div, editable) {
         this.numberGrid.push(gridRow);
     }
 
+    // TODO do this at some other place in a less hacky way
+    if (this.hasFreeSpace) {
+        this.numberGrid[2][2].cell.classList.add('free-space');
+    }
+
     this.updateSize();
 };
 
