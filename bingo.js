@@ -304,8 +304,6 @@ Card.prototype.bindToDiv = function(div, editable) {
 
     // Set up the card controls
     // TODO add button to view printable version, which will hide the controls div
-    var textCardNum = document.createTextNode('Card Number: ' + this.cardNumber.toString().padStart(3, '0'));
-    divControls.appendChild(textCardNum);
     divControls.classList.add('bingo-controls');
 
     if (editable) {
@@ -411,6 +409,13 @@ Card.prototype.bindToDiv = function(div, editable) {
     if (this.hasFreeSpace) {
         this.numberGrid[2][2].cell.classList.add('free-space');
     }
+
+    // Footer (Card Number)
+    var cardNumText = 'Card Number: ' + this.cardNumber.toString().padStart(3, '0');
+    var pCardNum = document.createElement('span');
+    pCardNum.classList.add('bingo-card-number');
+    pCardNum.innerText = cardNumText;
+    divCard.appendChild(pCardNum);
 
     this.updateSize();
 };

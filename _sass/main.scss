@@ -113,3 +113,12 @@ td.marker.selected div {
 span.error {
     color: red;
 }
+
+.bingo-card-number {
+    display: block;
+    position: absolute;
+    bottom: calc(var(--unit-size) / 2 * 0.4 - 0.2em);
+    font-size: 0.4em;
+    padding-left: 0.2em;
+    color: white;
+}
