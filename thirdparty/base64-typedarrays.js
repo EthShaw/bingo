@@ -22,13 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-// This code has been modified by Ethan Shaw in the following ways:
+// NOTE: This code has been modified by Ethan Shaw in the following ways:
 // Instead of using JavaScript modules, everything is wrapped in a
 // function, and the exported functions are made global by setting
-// them as properties on window (this makes it compatible with IE).
-// Default parameters were also replaced with null checks. This was
-// only for syntax compatibility since TextEncoder does not exist
-// on IE anyway (meaning those two functions don't work on IE).
+// them as properties on window (more browser compatibility).
 
 (function() {
 	/*

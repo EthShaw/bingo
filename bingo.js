@@ -28,10 +28,6 @@ var CARD_URL_VERSION = 0;
 // It is a number.
 var CARD_SET_DATA_VERSION = 0.0;
 
-// IE support
-if (!Array.prototype.includes) {
-    Array.prototype.includes = function(x) { return this.indexOf(x) !== -1; };
-}
 if (!String.prototype.padStart) {
     String.prototype.padStart = function(targetLength, padStr) {
         padStr = padStr || ' ';

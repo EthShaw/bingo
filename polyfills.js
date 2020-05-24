@@ -26,3 +26,7 @@
 function supportsCSSVariables() {
     return window.CSS && CSS.supports('color', 'var(--fake-var)');
 }
+
+if (!Array.prototype.includes) {
+    Array.prototype.includes = function(x) { return this.indexOf(x) !== -1; };
+}
