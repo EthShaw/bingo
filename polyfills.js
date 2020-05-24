@@ -30,3 +30,31 @@ function supportsCSSVariables() {
 if (!Array.prototype.includes) {
     Array.prototype.includes = function(x) { return this.indexOf(x) !== -1; };
 }
+
+if (!String.prototype.padStart) {
+    String.prototype.padStart = function(targetLength, padStr) {
+        padStr = padStr || ' ';
+        var newStr = this.valueOf();
+        var idx = 0;
+
+        while (newStr.length < targetLength) {
+            newStr = padStr[idx++ % padStr.length] + newStr;
+        }
+
+        return newStr;
+    };
+}
+
+if (!String.prototype.padEnd) {
+    String.prototype.padEnd = function(targetLength, padStr) {
+        padStr = padStr || ' ';
+        var newStr = this.valueOf();
+        var idx = 0;
+
+        while (newStr.length < targetLength) {
+            newStr += padStr[idx++ % padStr.length];
+        }
+
+        return newStr;
+    };
+}
