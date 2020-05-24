@@ -203,7 +203,7 @@ Card.createCardID = function(seed, cardNum, hasFreeSpace) {
 };
 
 Card.loadFromURL = function() {
-    var params = new URLSearchParams(window.location.search);
+    var params = new URLSearchParams(window.location.search.substring(1));
     var cardID = params.get('s');
 
     try {
