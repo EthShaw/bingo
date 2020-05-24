@@ -213,7 +213,6 @@ Card.loadFromURL = function() {
     try {
         // This will throw if the cardID is null or invalid
         var card = new Card(cardID);
-        card.setState(CardStateStore.getStateForID(cardID));
         return card;
     } catch (err) {
         console.log('There was an error loading the card from URL!');

@@ -10,10 +10,11 @@ title: Bingo Card
 <script>
     var div = document.createElement('div');
     document.body.appendChild(div);
-    
+
     div.classList.add('full-page-card');
 
     var card = Card.loadFromURL();
+    card.setState(CardStateStore.getStateForID(card.ID));
 
     if (card == null) {
         // The URL parameter must be invalid, so redirect to the generator
