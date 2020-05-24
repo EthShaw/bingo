@@ -305,8 +305,17 @@ Card.prototype.bindToDiv = function(div, editable) {
     // Set up the card controls
     // TODO add button to view printable version, which will hide the controls div
     divControls.classList.add('bingo-controls');
+    divControls.classList.add('no-print');
 
     if (editable) {
+        var btnPrintable = document.createElement('button');
+        btnPrintable.innerText = 'Printable View';
+        divControls.appendChild(btnPrintable);
+
+        btnPrintable.addEventListener('click', function() {
+            window.open('print.html?s=' + theCard.ID);
+        });
+
         var btnClear = document.createElement('button');
         btnClear.innerText = 'Clear Card';
         divControls.appendChild(btnClear);
