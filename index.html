@@ -14,7 +14,6 @@ title: Bingo Card
     div.classList.add('full-page-card');
 
     var card = Card.loadFromURL();
-    card.setState(CardStateStore.getStateForID(card.ID));
 
     if (card == null) {
         // The URL parameter must be invalid, so redirect to the generator
@@ -24,6 +23,7 @@ title: Bingo Card
         // TODO link to maker.html somewhere on this page
         window.location.href = document.getElementById('makerLoc').href;
     } else {
+        card.setState(CardStateStore.getStateForID(card.ID));
         card.bindToDiv(div, true);
     }
 
