@@ -1,6 +1,8 @@
 # Local jekyll
 .jekyll-metadata
 _site/
+Gemfile
+Gemfile.lock
 
 # VS Code
 .vscode/
