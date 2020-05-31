@@ -125,18 +125,12 @@ span.error {
     color: white;
 }
 
-.no-print {
-    @media print {
-        display: none;
-    }
-
-    .printing & {
-        display: none;
-    }
-}
-
 @media print {
     .no-print {
         display: none;
     }
+}
+
+main {
+    margin: 2.5vw;
 }
