@@ -303,7 +303,7 @@ Card.prototype.bindToDiv = function(div, editable) {
     divControls.classList.add('no-print');
 
     if (editable) {
-        var btnPrintable = document.createElement('button');
+        let btnPrintable = document.createElement('button');
         btnPrintable.innerText = 'Printable View';
         divControls.appendChild(btnPrintable);
 
@@ -311,7 +311,7 @@ Card.prototype.bindToDiv = function(div, editable) {
             window.open('print.html?s=' + theCard.ID);
         });
 
-        var btnClear = document.createElement('button');
+        let btnClear = document.createElement('button');
         btnClear.innerText = 'Clear Card';
         divControls.appendChild(btnClear);
 
@@ -319,6 +319,13 @@ Card.prototype.bindToDiv = function(div, editable) {
             theCard.setState(Card.EMPTY_STATE());
             theCard.persistState();
         });
+
+        let aMaker = document.createElement('a');
+        let link = document.getElementById('makerLoc').href;
+        aMaker.innerText = 'Bingo Card Maker';
+        aMaker.target = '_blank';
+        aMaker.href = link;
+        divControls.appendChild(aMaker);
     }
 
 
