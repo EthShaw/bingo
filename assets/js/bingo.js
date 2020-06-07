@@ -524,6 +524,19 @@ CardManager.prototype.deleteSetAtIdx = function(idx) {
     this.saveStorage();
 };
 
+CardManager.prototype.deleteSet = function(set) {
+    var sets = this.getAllSets();
+    let idx = sets.indexOf(set);
+
+    if (idx !== -1) {
+        sets.splice(idx, 1);
+        this.saveStorage();
+        return true;
+    }
+
+    return false;
+}
+
 
 
 function Caller(cardSet) {

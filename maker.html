@@ -12,6 +12,9 @@ description: Online free virtual/printable bingo card generator with bingo calle
     <p>
         Welcome to my free online Bingo card generator. It's not perfect, but
         for anyone that finds it, I hope it's useful.
+        <a href="https://github.com/FishDog5000/bingo">
+            The source code is available on GitHub.
+        </a>
     </p>
     <p>
         When you generate a bingo card, all the data of the card is stored in
@@ -34,6 +37,7 @@ description: Online free virtual/printable bingo card generator with bingo calle
 
     <div id="divCaller" hidden>
         <button id="btnNextCall">Call Next Number</button>
+        <button id="btnRestartGame">Restart Game</button>
         <br>
         <textarea rows="10" id="divCalls" disabled></textarea>
         <input id="textCallerCardNum" type="number">
@@ -50,27 +54,30 @@ description: Online free virtual/printable bingo card generator with bingo calle
         <br>
     </div>
 
-    <select id="selectSet">
-        <option value="new" selected>--Create New Set--</option>
-    </select>
-    <div id="divEdit">
-        <button id="btnRename" disabled>Rename (not yet implemented)</button>
-        <button id="btnDelete">Delete</button>
-        <button id="btnStartGame">Start Game</button>
-    </div>
-    <div id="divNewCards">
-        Name of card set:
-        <input id="textSetName" type="text"><br>
-        Number of cards to generate:
-        <!--TODO limit the input to only valid integers-->
-        <input id="textNumCards" type="number"><br>
-        <label><input type="checkbox" id="checkboxUseFreeSpace">Enable free space?</label><br>
-        <span class="error" id="pErrMsg" hidden></span><br>
-        <button id="btnCreateSet">Create Cards</button>
-        <p id="cards"></p>
-    </div>
-    <div id="divCardList">
-
+    <div id="divCardSets">
+        <div id="divCardSetHolder">
+        </div>
+        <div id="divNewCards" class="bingo-card-set">
+            <span>
+                Name of card set:
+                <!--
+                    Disabling autocomplete is necessary to stop the browser
+                    from auto-filling the last value in certain situations
+                    and creating problems with the name validity checker.
+                -->
+                <input id="textSetName" autocomplete="off" type="text">
+            </span>
+            <span>
+                Number of cards to generate:
+                <!--TODO limit the input to only valid integers-->
+                <input id="textNumCards" type="number">
+            </span>
+            <span>
+                <label><input type="checkbox" id="checkboxUseFreeSpace">Enable free space?</label>
+            </span>
+            <span class="error" id="pErrMsg" hidden></span>
+            <button id="btnCreateSet">Create Cards</button>
+        </div>
     </div>
 
     <script src="assets/js/maker.js"></script>

@@ -1,184 +1,304 @@
-window.addEventListener('DOMContentLoaded', function() {
-    var manager = new CardManager();
-    var selectSet = document.getElementById('selectSet');
-    var divNewCards = document.getElementById('divNewCards');
-    var divEdit = document.getElementById('divEdit');
-    var btnCreateSet = document.getElementById('btnCreateSet');
-    var btnRename = document.getElementById('btnRename');
-    var btnDelete = document.getElementById('btnDelete');
-    var btnStartGame = document.getElementById('btnStartGame');
-    var textSetName = document.getElementById('textSetName');
-    var textNumCards = document.getElementById('textNumCards');
-    var checkboxUseFreeSpace = document.getElementById('checkboxUseFreeSpace');
-    var pErrMsg = document.getElementById('pErrMsg');
-    var divCardList = document.getElementById('divCardList');
-    var BINGO_URL = document.getElementById('cardLoc');
+/**
+ * Copyright (c) 2020 Ethan Shaw
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+'use strict';
 
-    var caller, boundCard;
-    var btnNextCall = document.getElementById('btnNextCall');
-    var divCalls = document.getElementById('divCalls');
-    var textCallerCardNum = document.getElementById('textCallerCardNum');
-    var divCardCheck = document.getElementById('divCardCheck');
-    var btnCardCheck = document.getElementById('btnCardCheck');
+window.addEventListener('DOMContentLoaded', function() {
+    const BINGO_URL = document.getElementById('cardLoc');
+    let manager = new CardManager();
+
+    class CardSetElem {
+        constructor(set, elemParent) {
+            this.elemParent = elemParent;
+            this.cardSet = set;
+
+            let divElem = document.createElement('div');
+            divElem.classList.add('bingo-card-set')
+
+            let spanName = document.createElement('span');
+            let btnRename = document.createElement('button');
+            let spanCardCount = document.createElement('span');
+            let spanHasFreeSpace = document.createElement('span');
+            let btnStartGame = document.createElement('button');
+            let spanCards = document.createElement('span');
+            let btnViewCards = document.createElement('button');
+            let ulCardList = document.createElement('ul');
+            let btnDelete = document.createElement('button');
+
+            spanName.innerText = 'Name: ' + set.name;
+            spanCardCount.innerText = 'Number of card: ' + set.cards.length;
+            spanHasFreeSpace.innerText = set.freeSpace ? 'Has free spaces.' : 'Doesn\'t have free spaces.';
+
+            ulCardList.hidden = true;;
+            let cSElem = this;
+
+            btnRename.innerText = 'Rename';
+            btnRename.addEventListener('click', function() {
+                // TODO don't use JavaScript popups for this
+                let newName = prompt('What would you like to name the card set?', set.name);
+
+                // Name didn't change, so do nothing (null means that the user
+                // pressed cancel)
+                if (newName === set.name || newName === null) {
+                    return;
+                }
+
+                let validity = getNameValidity(newName);
+                if (validity === 1) {
+                    set.name = newName;
+                    spanName.innerText = 'Name: ' + set.name;
+                    manager.saveStorage();
+                } else {
+                    if (validity === 0) {
+                        alert('New name cannot be empty');
+                    } else {
+                        alert('Name "' + newName + '" is already taken!');
+                    }
+                }
+            });
+
+            btnStartGame.innerText = 'Start Game';
+            btnStartGame.addEventListener('click', function() {
+                startGame(set);
+            });
+
+            btnViewCards.innerText = 'View Cards';
+            btnViewCards.addEventListener('click', function() {
+                if (!cSElem.populated) {
+                    btnViewCards.innerText = 'Hide Cards';
+                    let docFrag = document.createDocumentFragment();
+
+                    set.cards.forEach(function(id) {
+                        let card = new Card(id);
+
+                        let urlStr = BINGO_URL + '?s=' + id;
+                        let aUrl = document.createElement('a');
+                        let liCard = document.createElement('li');
+                        let textCardNum = document.createTextNode('Card ' + card.cardNumber.toString().padStart(3, '0') + ': ');
+
+                        aUrl.href = urlStr;
+                        aUrl.innerText = urlStr;
+
+                        liCard.appendChild(textCardNum);
+                        liCard.appendChild(aUrl);
+
+                        docFrag.appendChild(liCard);
+                    });
+
+                    ulCardList.appendChild(docFrag);
+                    cSElem.populated = true;
+                }
+
+                ulCardList.hidden = !ulCardList.hidden;
+
+                if (ulCardList.hidden) {
+                    btnViewCards.innerText = 'View Cards';
+                } else {
+                    btnViewCards.innerText = 'Hide Cards';
+                }
+            });
+
+            btnDelete.innerText = 'Delete Set';
+            btnDelete.addEventListener('click', function() {
+                // TODO don't use window.confirm, use a custom html approach
+                let sure = window.confirm('Are you sure you want to delete the set named "' + set.name + '"?');
+
+                if (sure) {
+                    if (!manager.deleteSet(set)) {
+                        console.error('Set was not actually deleted: ' + set.name);
+                    }
+                    cSElem.destroy();
+                }
+            });
+
+            spanName.appendChild(btnRename);
+            spanCards.appendChild(btnViewCards);
+            spanCards.appendChild(ulCardList);
+
+            spanName.classList.add('bingo-card-set-child');
+            spanCardCount.classList.add('bingo-card-set-child');
+            spanHasFreeSpace.classList.add('bingo-card-set-child');
+            btnStartGame.classList.add('bingo-card-set-child');
+            spanCards.classList.add('bingo-card-set-child');
+            btnDelete.classList.add('bingo-card-set-child');
+
+            divElem.appendChild(spanName);
+            divElem.appendChild(spanCardCount);
+            divElem.appendChild(spanHasFreeSpace);
+            divElem.appendChild(btnStartGame);
+            divElem.appendChild(spanCards);
+            divElem.appendChild(btnDelete);
+            elemParent.appendChild(divElem);
+
+            this.elem = divElem;
+        }
+
+        destroy() {
+            this.elemParent.removeChild(this.elem);
+        }
+    }
+
+    // Populate the card set list
+    let elemList = document.getElementById('divCardSetHolder');
+
+    manager.getAllSets().forEach(function(x) {
+        new CardSetElem(x, elemList);
+    });
+
+    // Card set creator menu stuff
+    let btnCreateSet = document.getElementById('btnCreateSet');
+    let textSetName = document.getElementById('textSetName');
+    let textNumCards = document.getElementById('textNumCards');
+    let checkboxUseFreeSpace = document.getElementById('checkboxUseFreeSpace');
+    let pErrMsg = document.getElementById('pErrMsg');
+
+    // Returns 0 for empty, -1 for taken, and 1 for not taken
+    function getNameValidity(name) {
+        if (!name || name.length === 0) {
+            return 0;
+        }
+
+        let sets = manager.getAllSets();
+
+        for (let i = 0; i < sets.length; i++) {
+            let set = sets[i];
+
+            if (name === set.name) {
+                return -1;
+            }
+        }
+
+        return 1;
+    }
+
+    function checkValidName(value) {
+        // If this is called as the event handler, value is an object and needs
+        // to be ignored (and instead gotten from the textbox AKA this), but
+        // otherwise it is the value passed in by the calling function.
+        if (typeof (value) !== 'string') {
+            value = this.value;
+        }
+
+        let validity = getNameValidity(value);
+
+        // If the name is empty, don't display any errors
+        if (validity === 0) {
+            pErrMsg.hidden = true;
+            btnCreateSet.disabled = true;
+            return;
+        } else if (validity === -1) {
+            pErrMsg.innerText = 'Error: A set already exists with that name!';
+            pErrMsg.hidden = false;
+            btnCreateSet.disabled = true;
+            return;
+        } else {
+            pErrMsg.hidden = true;
+            btnCreateSet.disabled = false;
+        }
+    }
+
+    function makeSetClick() {
+        let name = textSetName.value;
+        let num = parseInt(textNumCards.value);
+        let useFreeSpace = checkboxUseFreeSpace.checked;
+
+        // This should never actually happen because the button should be disabled
+        // for invalid set names
+        if (getNameValidity(name) !== 1) {
+            pErrMsg.innerText = 'Error: set name invalid or already taken!';
+            console.log('This should not have happened!');
+            pErrMsg.hidden = false;
+            return;
+        }
+
+        let set = manager.newSet(name, num, useFreeSpace);
+
+        new CardSetElem(set, elemList);
+
+        // Clear the name textbox after creating the set
+        textSetName.value = '';
+        checkValidName(textSetName.value);
+    }
+
+    // Caller stuff
+    let caller, boundCard, currentSet;
+    let divCaller = document.getElementById('divCaller');
+    let btnNextCall = document.getElementById('btnNextCall');
+    let btnRestartGame = document.getElementById('btnRestartGame');
+    let divCalls = document.getElementById('divCalls');
+    let textCallerCardNum = document.getElementById('textCallerCardNum');
+    let divCardCheck = document.getElementById('divCardCheck');
+    let btnCardCheck = document.getElementById('btnCardCheck');
 
     divCardCheck.style.width = '300px';
     divCardCheck.style.height = '300px';
 
-    function updateSelectState() {
-        // Delete all the old cards from the card list
-        while (divCardList.firstChild) {
-            divCardList.removeChild(divCardList.lastChild);
-        }
+    function startGame(set) {
+        // Clean up after previous games
+        if (caller) {
+            let sure = confirm('Are you sure you want to start a new game and end the current one?');
 
-        if (selectSet.value === 'new') {
-            divEdit.hidden = true;
-            btnCreateSet.hidden = false;
-
-            checkboxUseFreeSpace.disabled = false;
-            textSetName.disabled = false;
-            textNumCards.disabled = false;
-
-            checkboxUseFreeSpace.checked = true;
-            textSetName.value = '';
-            textNumCards.value = 30;
-
-            // TODO this is very hacky and a very temporary solution that makes the code worse,
-            // when the real solution should be to make the code better in the first place.
-            checkValidName.apply({ value: '' });
-        } else {
-            divEdit.hidden = false;
-            btnCreateSet.hidden = true;
-
-            checkboxUseFreeSpace.disabled = true;
-            textSetName.disabled = true;
-            textNumCards.disabled = true;
-
-            var set = manager.getAllSets()[parseInt(selectSet.value)];
-            var ids = set.cards;
-
-            checkboxUseFreeSpace.checked = set.freeSpace;
-            textSetName.value = set.name;
-            textNumCards.value = ids.length;
-            pErrMsg.hidden = true;
-
-            // Using a document fragment means a reflow doesn't have to
-            // occur with each card added to the list (it's faster)
-            let frag = document.createDocumentFragment();
-
-            // Populate the card list
-            for (var i = 0; i < ids.length; i++) {
-                var id = ids[i];
-                var card = new Card(id);
-
-                var str = BINGO_URL + '?s=' + id;
-                var a = document.createElement('a');
-                var li = document.createElement('li');
-
-                a.href = str;
-                a.innerText = str;
-
-                li.appendChild(document.createTextNode('Card ' + card.cardNumber.toString().padStart(3, '0') + ': '));
-                li.appendChild(a);
-                frag.appendChild(li);
-            }
-
-            divCardList.appendChild(frag);
-        }
-    }
-
-    function checkValidName(event) {
-        var name = this.value;
-
-        // If the name is empty, don't display any errors
-        if (name.length === 0) {
-            pErrMsg.hidden = true;
-            btnCreateSet.disabled = true;
-            return;
-        }
-
-        var sets = manager.getAllSets();
-
-        for (var i = 0; i < sets.length; i++) {
-            var set = sets[i];
-
-            if (name === set.name) {
-                pErrMsg.innerText = 'Error: A set already exists with that name!';
-                pErrMsg.hidden = false;
-                btnCreateSet.disabled = true;
+            if (!sure) {
                 return;
             }
-        }
 
-        pErrMsg.hidden = true;
-        btnCreateSet.disabled = false;
-    }
+            divCalls.value = '';
 
-    function gen() {
-        var name = textSetName.value;
-        var num = parseInt(textNumCards.value);
-        var p = document.getElementById('cards');
-        p.innerText = '';
-        var ids = [];
-        var useFreeSpace = checkboxUseFreeSpace.checked;
-        var sets = manager.getAllSets();
+            if (boundCard) {
+                // TODO remove the necessity for this try-catch
+                // See checkCard function for more info.
+                try {
+                    let tempCard = boundCard;
+                    boundCard = null;
+                    caller.unShowCard(divCardCheck, tempCard);
+                } catch { }
 
-        for (var i = 0; i < sets.length; i++) {
-            var set = sets[i];
-
-            if (name === set.name) {
-                pErrMsg.innerText = 'Error: A set already exists with that name!';
-                pErrMsg.hidden = false;
-                return;
+                while (divCardCheck.firstChild) {
+                    divCardCheck.removeChild(divCardCheck.lastChild);
+                }
             }
         }
 
-        var set = manager.newSet(name, num, useFreeSpace);
-
-        var option = document.createElement('option');
-        option.value = manager.getAllSets().length - 1;
-        option.innerText = sets[i].name;
-        selectSet.appendChild(option);
-
-        selectSet.value = option.value;
-        updateSelectState.apply(selectSet);
-    }
-
-    function deleteSelectedSet() {
-        var set = manager.getAllSets()[parseInt(selectSet.value)];
-        // TODO don't use window.confirm, use a custom html approach
-        var sure = window.confirm("Are you sure you want to delete the set named '" + set.name + "'?");
-
-        if (sure) {
-            manager.deleteSetAtIdx(selectSet.value);
-            selectSet.remove(selectSet.selectedIndex);
-
-            // TODO we actually have to renumber all the values of all the sets in the select menu if it is not the last set that's deleted
-            selectSet.value = 'new';
-        }
-    }
-
-    function startGame() {
-        var set = manager.getAllSets()[parseInt(selectSet.value)];
         divCaller.hidden = false;
+        currentSet = set;
         caller = new Caller(set);
     }
 
     function nextCall() {
-        var next = caller.nextCall();
-        divCalls.value = next + "\n" + divCalls.value;
-        //divCalls.appendChild(document.createTextNode(next));
-        //divCalls.appendChild(document.createElement('br'));
+        let next = caller.nextCall();
+        if (next == null) {
+            next = 'All numbers have been called!';
+        }
+        divCalls.value = next + '\n' + divCalls.value;
     }
 
     function checkCard() {
-        var num = parseInt(textCallerCardNum.value);
+        let num = parseInt(textCallerCardNum.value);
 
         if (boundCard) {
             // In case there is an error, null boundCard first so it is gone.
             // This is a temporary workaround that fixes if the user types
             // a card number that is out of range of the cards available.
             // NOT A PERMANENT SOLUTION
-            var tempCard = boundCard;
+            let tempCard = boundCard;
             boundCard = null;
             caller.unShowCard(divCardCheck, tempCard);
         }
@@ -188,22 +308,15 @@ window.addEventListener('DOMContentLoaded', function() {
         caller.showCard(divCardCheck, num);
     }
 
-    selectSet.addEventListener('change', updateSelectState);
-    btnCreateSet.addEventListener('click', gen);
+    // This makes sure the Create Cards button is disabled when the page first
+    // loads with an empty name in the text input.
+    checkValidName(textSetName.value);
+
+    btnCreateSet.addEventListener('click', makeSetClick);
     textSetName.addEventListener('input', checkValidName);
-    btnDelete.addEventListener('click', deleteSelectedSet);
-    btnStartGame.addEventListener('click', startGame);
     btnNextCall.addEventListener('click', nextCall);
     btnCardCheck.addEventListener('click', checkCard);
-
-    var sets = manager.getAllSets();
-
-    for (var i = 0; i < sets.length; i++) {
-        var option = document.createElement('option');
-        option.value = i;
-        option.innerText = sets[i].name;
-        selectSet.appendChild(option);
-    }
-
-    updateSelectState();
+    btnRestartGame.addEventListener('click', function() {
+        startGame(currentSet);
+    });
 });
