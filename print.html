@@ -10,11 +10,27 @@ title: Print Bingo Cards
 <style>
     .bingo-card-img {
         margin: auto;
-        padding: 1in;
+        padding: 0.25in;
         height: 7in;
+    }
+
+    #printBlock {
+        margin: 1in;
+    }
+
+    #printControls button {
+        font-size: 2em;
+        margin: 5px;
     }
 </style>
 
 <a id="makerLoc" href="{{ "maker.html" | absolute_url }}" hidden></a>
+
+<div id="printControls" class="no-print">
+    <button onclick="print()">Print (Ctrl + P)</button>
+</div>
+
+<div id="printBlock">
+</div>
 
 <script src="assets/js/print.js"></script>

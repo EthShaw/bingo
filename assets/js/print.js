@@ -19,77 +19,106 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+'use strict';
 
-var divCard = document.createElement('div');
-document.body.appendChild(divCard);
-
+var divPrintBlock = document.getElementById('printBlock');
+var divPrintControls = document.getElementById('printControls');
 var card = Card.loadFromURL();
+var cards;
 
 if (card == null) {
-    // The URL parameter must be invalid, so redirect to the generator
-    // TODO have some kind of message so they know what's going on
-    window.location.href = document.getElementById('makerLoc').href;
+    let params = new URLSearchParams(window.location.search.substring(1));
+
+    let cardSetIdx = params.get('l');
+
+    let manager = new CardManager();
+
+    sets = manager.getAllSets();
+
+    set = sets[cardSetIdx];
+
+    if (!set) {
+        // The URL parameter must be invalid, so redirect to the generator
+        // TODO have some kind of message so they know what's going on
+        window.location.href = document.getElementById('makerLoc').href;
+    }
+
+    cards = set.cards.map(function (x) { new Card(x) });
 } else {
-    card.bindToDiv(divCard, false);
+    cards = [card];
 }
 
-var height = 5.5;
-// The height is about 1.17 times the width, so dividing by 1.15 adds some extra padding
-var width = height / 1.15;
-divCard.style.width = width + 'in';
-divCard.style.height = height + 'in';
-
-card.updateSize();
-
 // Get the CSS
-var sheets = document.styleSheets;
-var css = '';
+let sheets = document.styleSheets;
+let css = '';
 
-for (var i = 0; i < sheets.length; i++) {
-    var rules = sheets[i].cssRules;
-
-    for (var j = 0; j < rules.length; j++) {
-        css += rules[j].cssText + '\n';
+for (let sheet of sheets) {
+    for (let rule of sheet.cssRules) {
+        css += rule.cssText + '\n';
     }
 }
 
-var elemStyle = document.createElement('style');
-elemStyle.textContent = css;
+var rotate = false;
 
-divCard.appendChild(elemStyle);
+// Make the SVG for all the cards
+for (let card of cards) {
+    let divCard = document.createElement('div');
+    divPrintBlock.appendChild(divCard);
 
-var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    card.bindToDiv(divCard, false);
 
-// The card must be on the document for it to have a width and height, which
-// is used below.
-document.body.appendChild(svg);
+    let height = 5.5;
+    // The height is about 1.17 times the width, so dividing by 1.15 adds some extra padding
+    let width = height / 1.15;
+    divCard.style.width = width + 'in';
+    divCard.style.height = height + 'in';
+
+    card.updateSize();
+
+    let elemStyle = document.createElement('style');
+    elemStyle.textContent = css;
+
+    divCard.appendChild(elemStyle);
+
+    let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    // The card must be on the document for it to have a width and height, which
+    // is used below.
+    divPrintBlock.appendChild(svg);
 
 
-var foreignObj = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-svg.appendChild(foreignObj);
-foreignObj.appendChild(divCard);
+    let foreignObj = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+    svg.appendChild(foreignObj);
+    foreignObj.appendChild(divCard);
 
-svg.setAttributeNS(null, 'width', divCard.offsetWidth);
-svg.setAttributeNS(null, 'height', divCard.offsetHeight);
-svg.setAttributeNS(null, 'viewBox', '0 0 ' + divCard.offsetWidth + ' ' + divCard.offsetHeight);
+    if (rotate) {
+        svg.setAttributeNS(null, 'width', divCard.offsetHeight);
+        svg.setAttributeNS(null, 'height', divCard.offsetWidth);
+        svg.setAttributeNS(null, 'viewBox', '0 0 ' + divCard.offsetHeight + ' ' + divCard.offsetWidth);
+        foreignObj.setAttributeNS(null, 'transform', 'rotate(90) translate(0 ' + -divCard.offsetHeight + ')');
+    } else {
+        svg.setAttributeNS(null, 'width', divCard.offsetWidth);
+        svg.setAttributeNS(null, 'height', divCard.offsetHeight);
+        svg.setAttributeNS(null, 'viewBox', '0 0 ' + divCard.offsetWidth + ' ' + divCard.offsetHeight);
+    }
 
-foreignObj.setAttributeNS(null, 'x', 0);
-foreignObj.setAttributeNS(null, 'y', 0);
-foreignObj.setAttributeNS(null, 'width', divCard.offsetWidth);
-foreignObj.setAttributeNS(null, 'height', divCard.offsetHeight);
+    foreignObj.setAttributeNS(null, 'x', 0);
+    foreignObj.setAttributeNS(null, 'y', 0);
+    foreignObj.setAttributeNS(null, 'width', divCard.offsetWidth);
+    foreignObj.setAttributeNS(null, 'height', divCard.offsetHeight);
 
+    // Serialize the svg to XML, convert to base64, and turn into a data URI for an <img> tag
+    let xmlStr = new XMLSerializer().serializeToString(svg);
+    let svgB64 = btoa(xmlStr);
 
-// Serialize the svg to XML, convert to base64, and turn into a data URI for an <img> tag
-var xmlStr = new XMLSerializer().serializeToString(svg);
-var svgB64 = btoa(xmlStr);
+    let image = new Image();
+    image.src = 'data:image/svg+xml;base64,' + svgB64;
+    image.classList.add('bingo-card-img');
+    divPrintBlock.appendChild(image);
 
-var image = new Image();
-image.src = 'data:image/svg+xml;base64,' + svgB64;
-image.classList.add('bingo-card-img');
-document.body.appendChild(image);
-
-// Delete the SVG from the document
-document.body.removeChild(svg);
+    // Delete the SVG from the document
+    divPrintBlock.removeChild(svg);
+}
 
 // Thanks to inspiration from this StackOverflow question:
 // https://stackoverflow.com/questions/54535222/convert-svg-element-to-img

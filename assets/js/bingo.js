@@ -356,6 +356,7 @@ Card.prototype.bindToDiv = function(div, editable) {
 
     tableNums.classList.add('bingo-table');
     tableMarkers.classList.add('bingo-markers-table');
+    tableMarkers.classList.add('no-print');
 
     this.numberGrid = [];
 
